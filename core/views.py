@@ -227,24 +227,27 @@ def get_booking_events(request):
 
 def api_get_availability_events(request):
     try:
-        # Thay vì tạo ca trống, chúng ta chỉ trả về các đơn đặt máy đã được DUYỆT (APPROVED)
-        # để lịch trang chủ chỉ hiện những gì thực sự diễn ra.
         service = LabBookingService()
         lab_id = request.GET.get('lab_id')
         bookings = service.get_bookings()
         
-        events = []
+        # Nhóm các đơn đã duyệt theo khung giờ
+        slots_count = {}
         for b in bookings:
-            # Chỉ hiện các đơn đã duyệt và thuộc đúng phòng Lab đang chọn
             if b.get('status') == 'APPROVED' and (not lab_id or str(b.get('lab_id')) == str(lab_id)):
-                events.append({
-                    'id': b.get('id'),
-                    'title': f"Đã đặt: {b.get('user')}",
-                    'start': b.get('start_time'),
-                    'end': b.get('end_time'),
-                    'backgroundColor': '#e31b23', # Màu đỏ VLU cho các đơn đã đặt
-                    'borderColor': '#e31b23'
-                })
+                # Tạo khóa dựa trên thời gian bắt đầu và kết thúc
+                key = (b.get('start_time'), b.get('end_time'))
+                slots_count[key] = slots_count.get(key, 0) + 1
+        
+        events = []
+        for (start, end), count in slots_count.items():
+            events.append({
+                'title': f"Đã đặt: {count} máy",
+                'start': start,
+                'end': end,
+                'backgroundColor': '#e31b23', # Màu đỏ VLU
+                'borderColor': '#e31b23'
+            })
         return JsonResponse(events, safe=False)
     except: return JsonResponse([], safe=False)
 
