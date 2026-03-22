@@ -49,13 +49,17 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database configuration (PostgreSQL as requested)
+# Database configuration
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# Hỗ trợ chạy trên Vercel (Chuyển SQLite vào /tmp vì ổ đĩa chính là Read-only)
+if os.environ.get('VERCEL'):
+    DATABASES['default']['NAME'] = '/tmp/db.sqlite3'
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
