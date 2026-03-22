@@ -227,39 +227,24 @@ def get_booking_events(request):
 
 def api_get_availability_events(request):
     try:
+        # Thay vì tạo ca trống, chúng ta chỉ trả về các đơn đặt máy đã được DUYỆT (APPROVED)
+        # để lịch trang chủ chỉ hiện những gì thực sự diễn ra.
         service = LabBookingService()
         lab_id = request.GET.get('lab_id')
-        start_date_str = request.GET.get('start', '').split('T')[0]
-        end_date_str = request.GET.get('end', '').split('T')[0]
+        bookings = service.get_bookings()
         
-        if not lab_id: return JsonResponse([], safe=False)
-
-        curr = datetime.strptime(start_date_str, '%Y-%m-%d')
-        end = datetime.strptime(end_date_str, '%Y-%m-%d')
         events = []
-        
-        while curr <= end:
-            d_str = curr.strftime('%Y-%m-%d')
-            slots = service.get_availability(lab_id, d_str)
-            for s in slots:
-                available = s.get('available', 0)
-                color = '#22c55e' # Green
-                if available <= 0: color = '#ef4444' # Red
-                elif available < 10: color = '#f59e0b' # Warning
-                
+        for b in bookings:
+            # Chỉ hiện các đơn đã duyệt và thuộc đúng phòng Lab đang chọn
+            if b.get('status') == 'APPROVED' and (not lab_id or str(b.get('lab_id')) == str(lab_id)):
                 events.append({
-                    'title': f"Trống: {available}",
-                    'start': s['start_iso'],
-                    'end': s['end_iso'],
-                    'backgroundColor': color,
-                    'borderColor': color,
-                    'extendedProps': {
-                        'available': available,
-                        'total': s['total'],
-                        'status_msg': s['status_msg']
-                    }
+                    'id': b.get('id'),
+                    'title': f"Đã đặt: {b.get('user')}",
+                    'start': b.get('start_time'),
+                    'end': b.get('end_time'),
+                    'backgroundColor': '#e31b23', # Màu đỏ VLU cho các đơn đã đặt
+                    'borderColor': '#e31b23'
                 })
-            curr += timedelta(days=1)
         return JsonResponse(events, safe=False)
     except: return JsonResponse([], safe=False)
 
