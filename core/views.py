@@ -246,7 +246,7 @@ def api_get_availability_events(request):
                 elif available < 10: color = '#f59e0b' # Warning
                 
                 events.append({
-                    'title': f"{s['name']}: Trống {available}",
+                    'title': f"Trống: {available}",
                     'start': s['start_iso'],
                     'end': s['end_iso'],
                     'backgroundColor': color,
