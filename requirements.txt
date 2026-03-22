@@ -1,0 +1,18 @@
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Google Sheets / API
+credentials.json
+Django==6.0.3
+gspread==6.2.1
+google-auth==2.49.1
+google-api-python-client==2.193.0
+requests==2.32.5
+psycopg2-binary==2.9.11
