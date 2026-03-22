@@ -75,7 +75,7 @@ def api_create_booking(request):
             
             if success:
                 bid = result_val # Lúc này result_val chính là booking_id
-                url = request.build_absolute_uri(reverse('confirm-booking') + f'?bid={bid}')
+                url = request.build_absolute_uri('/confirm-booking/') + f'?bid={bid}'
                 
                 info = {
                     "Người đăng ký": f"{data.get('user')} ({data.get('mssv')})",
@@ -121,7 +121,7 @@ def api_update_booking_status(request):
                     }
                     
                     if status == 'APPROVED':
-                        url = request.build_absolute_uri(reverse('confirm-booking') + f'?bid={bid}')
+                        url = request.build_absolute_uri('/confirm-booking/') + f'?bid={bid}'
                         title = "ĐƠN ĐĂNG KÝ ĐÃ ĐƯỢC PHÊ DUYỆT"
                         content = f"<p>Chào {b.get('user', b.get('User'))}, đơn của bạn đã được phê duyệt với thông tin sau:</p>{get_info_table(info)}"
                         content += f'<p style="text-align:center; margin-top:25px;"><a href="{url}" style="background-color:#d32f2f; color:#fff; padding:12px 25px; text-decoration:none; border-radius:4px; font-weight:bold;">XÁC NHẬN & ĐỒNG BỘ LỊCH</a></p>'
@@ -168,7 +168,7 @@ def api_resend_booking_email(request):
             service = LabBookingService()
             b = next((i for i in service.get_bookings() if str(i.get('id', i.get('ID'))) == str(bid)), None)
             if b:
-                url = request.build_absolute_uri(reverse('confirm-booking') + f'?bid={bid}')
+                url = request.build_absolute_uri('/confirm-booking/') + f'?bid={bid}'
                 info = {
                     "Phòng Lab": b.get('lab_name'),
                     "Thời gian": str(b.get('start_time')).replace('T', ' '),
