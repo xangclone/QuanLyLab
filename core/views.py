@@ -226,15 +226,37 @@ def get_booking_events(request):
 def api_get_availability_events(request):
     try:
         service = LabBookingService()
+        lab_id = request.GET.get('lab_id')
         start_date_str = request.GET.get('start', '').split('T')[0]
         end_date_str = request.GET.get('end', '').split('T')[0]
+        
+        if not lab_id: return JsonResponse([], safe=False)
+
         curr = datetime.strptime(start_date_str, '%Y-%m-%d')
         end = datetime.strptime(end_date_str, '%Y-%m-%d')
         events = []
+        
         while curr <= end:
             d_str = curr.strftime('%Y-%m-%d')
-            for slot in service.SLOTS:
-                events.append({'title': slot['name'], 'start': f"{d_str}T{slot['start']}:00", 'end': f"{d_str}T{slot['end']}:00", 'backgroundColor': '#22c55e', 'borderColor': '#22c55e', 'extendedProps': {'slot_name': slot['name']}})
+            slots = service.get_availability(lab_id, d_str)
+            for s in slots:
+                available = s.get('available', 0)
+                color = '#22c55e' # Green
+                if available <= 0: color = '#ef4444' # Red
+                elif available < 10: color = '#f59e0b' # Warning
+                
+                events.append({
+                    'title': f"{s['name']}: Trống {available}",
+                    'start': s['start_iso'],
+                    'end': s['end_iso'],
+                    'backgroundColor': color,
+                    'borderColor': color,
+                    'extendedProps': {
+                        'available': available,
+                        'total': s['total'],
+                        'status_msg': s['status_msg']
+                    }
+                })
             curr += timedelta(days=1)
         return JsonResponse(events, safe=False)
     except: return JsonResponse([], safe=False)
