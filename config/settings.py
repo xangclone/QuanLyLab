@@ -57,9 +57,17 @@ DATABASES = {
     }
 }
 
-# Hỗ trợ chạy trên Vercel (Chuyển SQLite vào /tmp vì ổ đĩa chính là Read-only)
+# Hỗ trợ chạy trên Vercel (Copy SQLite vào /tmp để có quyền Ghi)
 if os.environ.get('VERCEL'):
-    DATABASES['default']['NAME'] = '/tmp/db.sqlite3'
+    import shutil
+    tmp_db = '/tmp/db.sqlite3'
+    # Copy file database gốc vào /tmp nếu trong /tmp chưa có
+    if not os.path.exists(tmp_db):
+        try:
+            shutil.copyfile(BASE_DIR / 'db.sqlite3', tmp_db)
+        except:
+            pass
+    DATABASES['default']['NAME'] = tmp_db
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
