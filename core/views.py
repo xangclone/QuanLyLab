@@ -216,7 +216,9 @@ def api_get_bookings_list(request):
 def api_update_student_status(request):
     if request.method == 'POST':
         data = json.loads(request.body)
-        success = LabBookingService().update_student_status(data.get('id'), data.get('status'))
+        # Handle both 'id' and 'mssv' keys to be safe
+        student_id = data.get('id') or data.get('mssv')
+        success = LabBookingService().update_student_status(student_id, data.get('status'))
         return JsonResponse({'status': 'success' if success else 'error'})
 
 def get_booking_events(request):

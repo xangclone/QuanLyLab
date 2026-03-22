@@ -758,6 +758,25 @@
         }
 
         // Action Handlers
+        async function updateStudentStatus(id, status) {
+            if (!confirm(`Xác nhận cập nhật trạng thái cho sinh viên này?`)) return;
+            try {
+                const res = await fetch('/api/students/update/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, status })
+                });
+                const result = await res.json();
+                if (result.status === 'success') {
+                    loadStudents();
+                } else {
+                    alert("Lỗi cập nhật: " + (result.message || "Không rõ nguyên nhân"));
+                }
+            } catch (err) {
+                alert("Lỗi kết nối server.");
+            }
+        }
+
         async function updateBookingStatus(id, status) {
             let reason = '';
             if (status === 'REJECTED') {
