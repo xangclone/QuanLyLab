@@ -117,7 +117,7 @@ def api_update_booking_status(request):
                     if status == 'APPROVED':
                         url = request.build_absolute_uri(reverse('confirm-booking') + f'?bid={bid}')
                         title = "ĐƠN ĐĂNG KÝ ĐÃ ĐƯỢC PHÊ DUYỆT"
-                        content = f"<p>Chào {b.get('user')}, đơn của bạn đã được phê duyệt với thông tin sau:</p>{get_info_table(info)}"
+                        content = f"<p>Chào {b.get('user', b.get('User'))}, đơn của bạn đã được phê duyệt với thông tin sau:</p>{get_info_table(info)}"
                         content += f'<p style="text-align:center; margin-top:25px;"><a href="{url}" style="background-color:#d32f2f; color:#fff; padding:12px 25px; text-decoration:none; border-radius:4px; font-weight:bold;">XÁC NHẬN & ĐỒNG BỘ LỊCH</a></p>'
                         note = "* Lưu ý: Bạn bắt buộc phải nhấn nút Xác nhận ở trên để hoàn tất thủ tục giữ chỗ."
                     else:
