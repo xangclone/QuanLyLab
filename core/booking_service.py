@@ -30,11 +30,17 @@ class LabBookingService:
             ]
             cred_path = os.path.join(os.getcwd(), 'credentials.json')
             
-            if not os.path.exists(cred_path):
-                self.error_msg = "Không tìm thấy file credentials.json"
+            # Ưu tiên đọc từ biến môi trường (Cho Vercel/Deploy)
+            env_creds = os.environ.get('GOOGLE_CREDENTIALS')
+            if env_creds:
+                import json
+                info = json.loads(env_creds)
+                self.creds = Credentials.from_service_account_info(info, scopes=scope)
+            elif os.path.exists(cred_path):
+                self.creds = Credentials.from_service_account_file(cred_path, scopes=scope)
+            else:
+                self.error_msg = "Không tìm thấy file credentials.json hoặc biến GOOGLE_CREDENTIALS"
                 return
-
-            self.creds = Credentials.from_service_account_file(cred_path, scopes=scope)
             self.client_email = self.creds.service_account_email
             client = gspread.authorize(self.creds)
             
