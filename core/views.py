@@ -123,7 +123,7 @@ def api_update_booking_status(request):
                     else:
                         title = "ĐƠN ĐĂNG KÝ BỊ TỪ CHỐI"
                         info["Lý do từ chối"] = f'<span style="color:red;">{reason}</span>'
-                        content = f"<p>Chào {b.get('user')}, Ban quản lý rất tiếc phải từ chối đơn đăng ký của bạn:</p>{get_info_table(info)}"
+                        content = f"<p>Chào {b.get('user', b.get('User'))}, Ban quản lý rất tiếc phải từ chối đơn đăng ký của bạn:</p>{get_info_table(info)}"
                         note = "Mọi thắc mắc vui lòng liên hệ văn phòng khoa."
                     
                     html = get_email_template(title, content, note)
@@ -168,9 +168,9 @@ def api_resend_booking_email(request):
                     "Thời gian": str(b.get('start_time')).replace('T', ' '),
                     "MSSV": b.get('mssv')
                 }
-                content = f"<p>Ban quản lý gửi lại thông tin xác nhận phê duyệt cho <b>{b.get('user')}</b>:</p>{get_info_table(info)}"
-                content += f'<p style="text-align:center;"><a href="{url}" style="color:#d32f2f; font-weight:bold; font-size:16px;">[NHẤN VÀO ĐÂY ĐỂ XÁC NHẬN]</a></p>'
-                html = get_email_template("GỬI LẠI THÔNG BÁO PHÊ DUYỆT", content)
+                content = f"<p>Ban quản lý gửi lại thông tin xác nhận phê duyệt cho <b>{b.get('user', b.get('User'))}</b>:</p>{get_info_table(info)}"
+                content += f'<p style="text-align:center; margin-top:25px;"><a href="{url}" style="background-color:#d32f2f; color:#fff; padding:12px 25px; text-decoration:none; border-radius:4px; font-weight:bold;">XÁC NHẬN & ĐỒNG BỘ LỊCH</a></p>'
+                html = get_email_template("GỬI LẠI THÔNG BÁO PHÊ DUYỆT", content, "* Vui lòng nhấn nút xác nhận để hoàn tất thủ tục.")
                 send_mail(f"[VLU LAB] (Gửi lại) Thông báo phê duyệt - {b.get('lab_name')}", "", settings.EMAIL_HOST_USER, [b.get('email', b.get('Email'))], html_message=html)
                 return JsonResponse({'status': 'success'})
             return JsonResponse({'status': 'error'})
