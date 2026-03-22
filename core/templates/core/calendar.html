@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đặt máy Lab theo Ca - VLU</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root { --vlu-red: #e31b23; }
+        body { background-color: #f8f9fa; }
+        .card { border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .slot-card { cursor: pointer; transition: 0.3s; border: 1px solid #ddd; }
+        .slot-card:hover { border-color: var(--vlu-red); background-color: #fff5f5; }
+        .slot-card.selected { border-color: var(--vlu-red); background-color: #ffebeb; }
+        .slot-card.disabled { opacity: 0.5; cursor: not-allowed; background-color: #eee; }
+        .availability-badge { font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card p-4 mb-4">
+                <h3 class="text-center mb-4" style="color: var(--vlu-red);">ĐẶT MÁY PHÒNG LAB THEO CA</h3>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label font-weight-bold">1. Chọn Phòng Lab</label>
+                        <select id="labSelect" class="form-select"></select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label font-weight-bold">2. Chọn Ngày</label>
+                        <input type="date" id="dateInput" class="form-control" min="">
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <label class="form-label font-weight-bold">3. Chọn Ca (Khung giờ)</label>
+                    <div id="slotsContainer" class="row g-2">
+                        <!-- Slots load here -->
+                    </div>
+                </div>
+
+                <div id="bookingForm" class="mt-4 d-none">
+                    <hr>
+                    <div class="mb-3">
+                        <label class="form-label">Tên người đặt</label>
+                        <input type="text" id="userName" class="form-control" placeholder="Nhập tên của bạn">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mục đích</label>
+                        <textarea id="purpose" class="form-control" rows="2"></textarea>
+                    </div>
+                    <button id="confirmBtn" class="btn btn-danger w-100 py-2 font-weight-bold">XÁC NHẬN ĐẶT MÁY</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedSlot = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const labSelect = document.getElementById('labSelect');
+    const dateInput = document.getElementById('dateInput');
+    const slotsContainer = document.getElementById('slotsContainer');
+    
+    // Set min date to today
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.value = today;
+    dateInput.min = today;
+
+    // Load Labs
+    const labsRes = await fetch('/api/labs/');
+    const labs = await labsRes.json();
+    labs.forEach(lab => {
+        labSelect.innerHTML += `<option value="${lab.id}">${lab.name} (Tối đa ${lab.capacity} máy)</option>`;
+    });
+
+    // Handle Change
+    const updateAvailability = async () => {
+        const labId = labSelect.value;
+        const date = dateInput.value;
+        if (!labId || !date) return;
+
+        slotsContainer.innerHTML = '<div class="text-center w-100">Đang kiểm tra số lượng máy...</div>';
+        
+        const res = await fetch(`/api/labs/availability/?lab_id=${labId}&date=${date}`);
+        const slots = await res.json();
+        
+        slotsContainer.innerHTML = '';
+        slots.forEach(slot => {
+            const isDisabled = slot.available <= 0;
+            const card = document.createElement('div');
+            card.className = `col-md-6`;
+            card.innerHTML = `
+                <div class="card p-3 slot-card ${isDisabled ? 'disabled' : ''}" onclick="selectSlot('${slot.start_iso}', '${slot.end_iso}', ${isDisabled}, this)">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-bold">${slot.name}</div>
+                            <small class="text-muted">${slot.time}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge ${slot.available > 10 ? 'bg-success' : 'bg-warning'} availability-badge">
+                                Trống: ${slot.available} / ${slot.total} máy
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            slotsContainer.appendChild(card);
+        });
+    };
+
+    labSelect.onchange = updateAvailability;
+    dateInput.onchange = updateAvailability;
+    updateAvailability();
+});
+
+function selectSlot(start, end, isDisabled, el) {
+    if (isDisabled) return;
+    
+    document.querySelectorAll('.slot-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    
+    selectedSlot = { start, end };
+    document.getElementById('bookingForm').classList.remove('d-none');
+}
+
+document.getElementById('confirmBtn').onclick = async () => {
+    const data = {
+        user: document.getElementById('userName').value,
+        lab_id: document.getElementById('labSelect').value,
+        lab_name: document.getElementById('labSelect').options[document.getElementById('labSelect').selectedIndex].text.split(' (')[0],
+        start_time: selectedSlot.start,
+        end_time: selectedSlot.end,
+        purpose: document.getElementById('purpose').value
+    };
+
+    if (!data.user) { alert("Vui lòng nhập tên!"); return; }
+
+    const res = await fetch('/api/bookings/create/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+
+    const result = await res.json();
+    if (result.status === 'success') {
+        alert("Đặt máy thành công!");
+        location.reload();
+    } else {
+        alert("Lỗi: " + result.message);
+    }
+};
+</script>
+</body>
+</html>

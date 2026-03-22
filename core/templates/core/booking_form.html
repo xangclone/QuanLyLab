@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đơn Đăng Ký Máy Lab - VLU</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
+        .doc-container { max-width: 800px; margin: 40px auto; background: white; padding: 50px; border-radius: 8px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); border-top: 8px solid #e31b23; }
+        .vlu-brand { color: #e31b23; font-weight: 800; font-size: 1.8rem; text-align: center; }
+        .doc-title { text-align: center; font-weight: 700; color: #333; margin: 20px 0 40px; text-transform: uppercase; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+        .section-title { font-size: 1.1rem; color: #e31b23; font-weight: bold; margin-bottom: 20px; display: flex; align-items: center; }
+        .section-title::after { content: ""; flex: 1; height: 1px; background: #eee; margin-left: 15px; }
+        .slot-box { border: 2px solid #f1f1f1; padding: 15px; border-radius: 10px; cursor: pointer; transition: all 0.2s; margin-bottom: 12px; background: #fafafa; }
+        .slot-box:hover { border-color: #e31b23; background: #fff5f5; }
+        .slot-box.selected { border-color: #e31b23; background: #ffebeb; }
+        .slot-box.disabled { opacity: 0.6; cursor: not-allowed; background: #eee; border-style: dashed; }
+        .badge-holiday { background: #ff9800; color: white; }
+        .badge-maintenance { background: #607d8b; color: white; }
+        .badge-closed { background: #f44336; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="container pb-5">
+    <div class="doc-container">
+        <div class="vlu-brand">VĂN LANG UNIVERSITY</div>
+        <p class="text-center text-muted small mb-0">Hệ thống quản lý phòng Lab thông minh</p>
+        <h3 class="doc-title">ĐƠN ĐĂNG KÝ MÁY TÍNH</h3>
+
+        <form id="bookingForm">
+            <div class="section-title">1. THÔNG TIN CÁ NHÂN</div>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6"><label class="form-label">MSSV</label><input type="text" id="mssv" class="form-control" required></div>
+                <div class="col-md-6"><label class="form-label">Họ và Tên</label><input type="text" id="user" class="form-control" required></div>
+                <div class="col-md-6"><label class="form-label">Email</label><input type="email" id="email" class="form-control" required></div>
+                <div class="col-md-6"><label class="form-label">Số điện thoại</label><input type="tel" id="phone" class="form-control" required></div>
+                <div class="col-md-6"><label class="form-label">Trường / Khoa</label><input type="text" id="university" class="form-control" required></div>
+                <div class="col-md-6">
+                    <label class="form-label">Hình thức</label>
+                    <select id="type" class="form-select" onchange="toggleGroupFields()">
+                        <option value="Cá nhân">Cá nhân</option>
+                        <option value="Nhóm">Theo Nhóm (Dự án/BT Lớn)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Trường dành riêng cho Nhóm -->
+            <div id="groupFields" style="display: none;" class="mb-4">
+                <div class="alert alert-warning small mb-3">
+                    <i class="fas fa-info-circle me-2"></i> Người đăng ký là <strong>trưởng nhóm</strong> và hoàn toàn chịu trách nhiệm về danh sách thành viên, tài sản và nội quy phòng Lab.
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Số lượng thành viên</label>
+                        <input type="number" id="group_size" class="form-control" min="2" max="10" value="2">
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label fw-bold">Danh sách thành viên (MSSV - Họ Tên)</label>
+                        <textarea id="group_members" class="form-control" rows="3" placeholder="Ví dụ:&#10;217480... - Nguyễn Văn A&#10;217480... - Trần Thị B"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-title">2. PHÒNG LAB & THỜI GIAN</div>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6"><label class="form-label">Phòng Lab</label><select id="lab_id" class="form-select" required></select></div>
+                <div class="col-md-6"><label class="form-label">Ngày sử dụng</label><input type="date" id="date" class="form-control" required></div>
+                <div class="col-12">
+                    <div id="slotsList" class="row g-2">
+                        <!-- Slots load here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-title">3. MỤC ĐÍCH SỬ DỤNG</div>
+            <textarea id="purpose" class="form-control mb-4" rows="3" required></textarea>
+
+            <button type="submit" id="submitBtn" class="btn btn-danger w-100 py-3 fw-bold">GỬI ĐƠN ĐĂNG KÝ</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    let selectedSlot = null;
+    document.addEventListener('DOMContentLoaded', async () => {
+        const labSelect = document.getElementById('lab_id');
+        const dateInput = document.getElementById('date');
+        const slotsList = document.getElementById('slotsList');
+
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
+        dateInput.min = today;
+
+        const labsRes = await fetch('/api/labs/');
+        const labs = await labsRes.json();
+        
+        if (labs.error || !Array.isArray(labs)) {
+            labSelect.innerHTML = `<option value="" disabled selected>${labs.error || 'Lỗi dữ liệu từ máy chủ'}</option>`;
+        } else {
+            labSelect.innerHTML = '<option value="" disabled selected>Chọn phòng Lab...</option>';
+            labs.forEach(l => {
+                const opt = document.createElement('option');
+                opt.value = l.id || l.ID;
+                opt.textContent = l.name || l.Name;
+                labSelect.appendChild(opt);
+            });
+        }
+
+        const updateSlots = async () => {
+            const labId = labSelect.value;
+            const date = dateInput.value;
+            if (!labId || !date) return;
+            slotsList.innerHTML = '<div class="col-12 text-center py-3"><div class="spinner-border text-danger" role="status"></div><br>Đang kiểm tra...</div>';
+            
+            try {
+                const res = await fetch(`/api/labs/availability/?lab_id=${labId}&date=${date}`);
+                const slots = await res.json();
+                
+                if (slots.error) {
+                    slotsList.innerHTML = `<div class="col-12 alert alert-warning text-center">Lỗi: ${slots.error}</div>`;
+                    return;
+                }
+
+                if (!slots || slots.length === 0) {
+                    slotsList.innerHTML = '<div class="col-12 alert alert-info text-center">Không tìm thấy ca sử dụng nào cho phòng này vào ngày đã chọn.</div>';
+                    return;
+                }
+
+                slotsList.innerHTML = '';
+                slots.forEach(s => {
+                    const isSpecial = s.type === 'HOLIDAY' || s.type === 'MAINTENANCE' || s.type === 'CLOSED';
+                    const disabled = s.available <= 0 || isSpecial;
+                    const badgeClass = s.type === 'HOLIDAY' ? 'badge-holiday' : (s.type === 'MAINTENANCE' ? 'badge-maintenance' : 'badge-closed');
+                    
+                    const div = document.createElement('div');
+                    div.className = 'col-md-6';
+                    div.innerHTML = `
+                        <div class="slot-box ${disabled ? 'disabled' : ''}" onclick="selectSlot('${s.start_iso}', '${s.end_iso}', ${disabled}, this)">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="fw-bold text-dark">${s.name}</div>
+                                    <div class="small text-muted">${s.time}</div>
+                                </div>
+                                <div class="text-end">
+                                    ${isSpecial ? `<span class="badge ${badgeClass}">${s.status_msg}</span>` : 
+                                    `<span class="badge ${s.available > 0 ? 'bg-success' : 'bg-danger'}">Trống: ${s.available}</span>`}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    slotsList.appendChild(div);
+                });
+            } catch (error) {
+                console.error(error);
+                slotsList.innerHTML = '<div class="col-12 alert alert-danger text-center">Lỗi kết nối máy chủ. Vui lòng thử lại sau!</div>';
+            }
+        };
+
+        labSelect.onchange = updateSlots;
+        dateInput.onchange = updateSlots;
+        updateSlots();
+    });
+
+    function selectSlot(start, end, disabled, el) {
+        if (disabled) return;
+        document.querySelectorAll('.slot-box').forEach(b => b.classList.remove('selected'));
+        el.classList.add('selected');
+        selectedSlot = { start, end };
+    }
+
+    function toggleGroupFields() {
+        const type = document.getElementById('type').value;
+        const groupFields = document.getElementById('groupFields');
+        groupFields.style.display = (type === 'Nhóm') ? 'block' : 'none';
+    }
+
+    document.getElementById('bookingForm').onsubmit = async (e) => {
+        e.preventDefault();
+        if (!selectedSlot) { alert("Vui lòng chọn ca sử dụng hợp lệ!"); return; }
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+
+        const type = document.getElementById('type').value;
+        const data = {
+            mssv: document.getElementById('mssv').value,
+            user: document.getElementById('user').value,
+            email: document.getElementById('email').value,
+            phone: document.getElementById('phone').value,
+            university: document.getElementById('university').value,
+            type: type,
+            lab_id: document.getElementById('lab_id').value,
+            lab_name: document.getElementById('lab_id').options[document.getElementById('lab_id').selectedIndex].text,
+            start_time: selectedSlot.start,
+            end_time: selectedSlot.end,
+            purpose: document.getElementById('purpose').value,
+            // Thêm thông tin nhóm nếu có
+            group_size: type === 'Nhóm' ? document.getElementById('group_size').value : 1,
+            group_members: type === 'Nhóm' ? document.getElementById('group_members').value : ''
+        };
+        const res = await fetch('/api/bookings/create/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if ((await res.json()).status === 'success') {
+            alert("Đăng ký thành công!");
+            location.href = "/";
+        } else {
+            alert("Có lỗi xảy ra!");
+            btn.disabled = false;
+        }
+    };
+</script>
+</body>
+</html>

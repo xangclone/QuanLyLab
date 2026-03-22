@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Quản Trị Lab VLU</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --vlu-red: #e31b23;
+            --vlu-red-dark: #b3151b;
+            --sidebar-bg: #111827;
+            --sidebar-hover: #1f2937;
+            --bg-light: #f3f4f6;
+            --sidebar-width: 280px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light);
+            color: #111827;
+        }
+
+        /* Sidebar Styling */
+        #sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: var(--sidebar-bg);
+            color: #fff;
+            position: fixed;
+            z-index: 1050;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .sidebar-menu {
+            padding: 1.5rem 1rem;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .menu-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #6b7280;
+            margin: 1.5rem 0 0.75rem 1rem;
+            font-weight: 700;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.875rem 1rem;
+            color: #9ca3af;
+            border-radius: 0.75rem;
+            margin-bottom: 0.25rem;
+            transition: all 0.2s;
+            font-weight: 500;
+            text-decoration: none;
+        }
+
+        .nav-link i {
+            width: 1.5rem;
+            margin-right: 0.75rem;
+            font-size: 1.25rem;
+            transition: 0.2s;
+        }
+
+        .nav-link:hover {
+            background: var(--sidebar-hover);
+            color: #fff;
+        }
+
+        .nav-link.active {
+            background: var(--vlu-red);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(227, 27, 35, 0.3);
+        }
+
+        .sidebar-footer {
+            padding: 1.5rem;
+            background: rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+        }
+
+        /* Content Area Styling */
+        #content {
+            margin-left: var(--sidebar-width);
+            padding: 2rem;
+            transition: all 0.3s;
+            min-height: 100vh;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+            background: #fff;
+            padding: 1rem 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        /* Stats Cards */
+        .stat-card {
+            background: #fff;
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            border: none;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-5px); }
+
+        /* Custom Tabs */
+        .nav-pills-custom .nav-link {
+            background: #fff;
+            color: #4b5563;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1.25rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+            border: 1px solid #e5e7eb;
+            transition: all 0.2s;
+        }
+        .nav-pills-custom .nav-link.active {
+            background: var(--sidebar-bg);
+            color: #fff;
+            border-color: var(--sidebar-bg);
+        }
+
+        /* Table Styling */
+        .card-table {
+            background: #fff;
+            border-radius: 1.25rem;
+            border: none;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .table { margin-bottom: 0; }
+        .table thead th {
+            background: #f9fafb;
+            padding: 1.25rem 1.5rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #6b7280;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .table tbody td {
+            padding: 1.25rem 1.5rem;
+            vertical-align: middle;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .badge-status {
+            padding: 0.4rem 0.8rem;
+            border-radius: 2rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        @media (max-width: 991.98px) {
+            #sidebar { margin-left: calc(-1 * var(--sidebar-width)); }
+            #sidebar.active { margin-left: 0; }
+            #content { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <nav id="sidebar">
+        <div class="sidebar-header">
+            <img src="https://vlu.edu.vn/images/vlu-logo.png" alt="VLU" style="height: 45px;" class="mb-3">
+            <div class="fw-bold small opacity-75">HỆ THỐNG QUẢN TRỊ LAB</div>
+        </div>
+
+        <div class="sidebar-menu">
+            <div class="menu-label">Tổng quan</div>
+            <a href="/" class="nav-link">
+                <i class="fas fa-home"></i> Trang Chủ
+            </a>
+            <a href="/admin/" class="nav-link active" data-bs-target="#tab-bookings">
+                <i class="fas fa-chart-pie"></i> Bảng Điều Khiển
+            </a>
+
+            <div class="menu-label">Quản lý chính</div>
+            <a href="#" class="nav-link" data-bs-target="#tab-bookings">
+                <i class="fas fa-calendar-check"></i> Phê Duyệt Lịch
+            </a>
+            <a href="#" class="nav-link" data-bs-target="#tab-history">
+                <i class="fas fa-history"></i> Lịch Sử Sử Dụng
+            </a>
+            <a href="#" class="nav-link" data-bs-target="#tab-students">
+                <i class="fas fa-user-graduate"></i> Sinh Viên
+            </a>
+            <a href="#" class="nav-link" data-bs-target="#tab-labs">
+                <i class="fas fa-door-open"></i> Danh Sách Lab
+            </a>
+
+            <div class="menu-label">Báo cáo & Hỗ trợ</div>
+            <a href="#" class="nav-link" data-bs-target="#tab-hygiene">
+                <i class="fas fa-shield-virus"></i> Vệ Sinh & Sự Cố
+            </a>
+            <a href="#" class="nav-link">
+                <i class="fas fa-file-export"></i> Xuất Báo Cáo
+            </a>
+        </div>
+
+        <div class="sidebar-footer">
+            <img src="https://ui-avatars.com/api/?name=Admin&background=e31b23&color=fff" class="rounded-circle me-3" width="35" alt="">
+            <div class="small">
+                <div class="fw-bold">Administrator</div>
+                <div class="opacity-50" style="font-size: 0.7rem;">Quản trị viên cao cấp</div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div id="content">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="d-flex align-items-center">
+                <button id="toggle-sidebar" class="btn btn-light border-0 me-3 d-lg-none">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h5 class="mb-0 fw-bold text-secondary">Chào buổi sáng, Admin!</h5>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <div class="position-relative">
+                    <i class="fas fa-bell text-muted fs-5"></i>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light" style="font-size: 0.5rem;">
+                        3+
+                    </span>
+                </div>
+                <div class="vr mx-2"></div>
+                <span class="fw-bold small" id="current-time"></span>
+            </div>
+        </div>
+
+        <!-- Main Tab Content -->
+        <div class="tab-content">
+            <!-- Tab Dashboard (Bảng điều khiển) -->
+            <div class="tab-pane fade show active" id="tab-dashboard">
+                <!-- Quick Stats Row -->
+                <div class="row g-4 mb-5">
+                    <div class="col-xl-3 col-md-6">
+                        <div class="stat-card border-start border-primary border-5">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="text-muted small fw-bold text-uppercase">Tổng lượt đặt</div>
+                                    <h3 class="fw-bold mb-0 mt-1" id="stat-total">0</h3>
+                                </div>
+                                <div class="bg-primary bg-opacity-10 p-3 rounded-4">
+                                    <i class="fas fa-clipboard-list text-primary fs-4"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-md-6">
+                        <div class="stat-card border-start border-warning border-5">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="text-muted small fw-bold text-uppercase">Đang chờ duyệt</div>
+                                    <h3 class="fw-bold mb-0 mt-1" id="stat-pending">0</h3>
+                                </div>
+                                <div class="bg-warning bg-opacity-10 p-3 rounded-4">
+                                    <i class="fas fa-hourglass-half text-warning fs-4"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-md-6">
+                        <div class="stat-card border-start border-success border-5">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="text-muted small fw-bold text-uppercase">Phòng đang mở</div>
+                                    <h3 class="fw-bold mb-0 mt-1" id="stat-labs">0</h3>
+                                </div>
+                                <div class="bg-success bg-opacity-10 p-3 rounded-4">
+                                    <i class="fas fa-door-open text-success fs-4"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-md-6">
+                        <div class="stat-card border-start border-danger border-5">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="text-muted small fw-bold text-uppercase">Báo cáo sự cố</div>
+                                    <h3 class="fw-bold mb-0 mt-1" id="stat-hygiene">0</h3>
+                                </div>
+                                <div class="bg-danger bg-opacity-10 p-3 rounded-4">
+                                    <i class="fas fa-exclamation-triangle text-danger fs-4"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="row g-4 mb-5">
+                    <div class="col-xl-8">
+                        <div class="stat-card h-100">
+                            <h5 class="fw-bold mb-4">Xu hướng đặt phòng (7 ngày gần nhất)</h5>
+                            <div style="position: relative; height: 350px;">
+                                <canvas id="bookingTrendChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-4">
+                        <div class="stat-card h-100">
+                            <h5 class="fw-bold mb-4">Tỷ lệ sử dụng theo Lab</h5>
+                            <div style="position: relative; height: 350px;">
+                                <canvas id="labUsageChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Bookings -->
+            <div class="tab-pane fade" id="tab-bookings">
+                <div class="d-flex justify-content-between align-items-end mb-4">
+                    <div>
+                        <h4 class="fw-bold mb-1">Phê Duyệt Lịch Đặt Máy</h4>
+                        <p class="text-muted small mb-0">Quản lý và duyệt các yêu cầu sử dụng phòng Lab</p>
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <!-- Nút gạt Phê duyệt tự động -->
+                        <div class="form-check form-switch bg-white border rounded-pill px-4 py-2 shadow-sm">
+                            <input class="form-check-input ms-0 me-2" type="checkbox" id="autoApprovalToggle" onchange="toggleAutoApproval(this.checked)">
+                            <label class="form-check-label fw-bold small text-secondary" for="autoApprovalToggle">Duyệt tự động</label>
+                        </div>
+                        <button class="btn btn-dark shadow-sm px-4 rounded-pill" onclick="loadBookings()">
+                            <i class="fas fa-sync-alt me-2"></i> Làm mới
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card-table">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Thông tin người đặt</th>
+                                    <th>Phòng Lab</th>
+                                    <th>Thời gian sử dụng</th>
+                                    <th>Quy mô</th>
+                                    <th>Trạng thái</th>
+                                    <th class="text-end">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bookingTableBody">
+                                <!-- Ajax Load -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Students -->
+            <div class="tab-pane fade" id="tab-students">
+                <h4 class="fw-bold mb-4">Danh Sách Sinh Viên</h4>
+                <div class="card-table">
+                    <table class="table" id="studentTable">
+                        <thead>
+                            <tr>
+                                <th>MSSV</th>
+                                <th>Họ Tên</th>
+                                <th>Email / SĐT</th>
+                                <th>Trạng Thái</th>
+                                <th class="text-end">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab Hygiene -->
+            <div class="tab-pane fade" id="tab-hygiene">
+                <h4 class="fw-bold mb-4">Báo Cáo Sự Cố & Vệ Sinh</h4>
+                <div class="row g-4" id="hygieneContainer">
+                    <!-- Sẽ hiển thị dạng Card cho đẹp -->
+                </div>
+            </div>
+
+            <!-- Tab History -->
+            <div class="tab-pane fade" id="tab-history">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="fw-bold mb-0">Lịch Sử Sử Dụng Toàn Hệ Thống</h4>
+                    <div class="d-flex gap-2">
+                        <input type="text" id="adminFilterName" class="form-control form-control-sm" style="width: 200px;" placeholder="Tên hoặc MSSV...">
+                        <input type="date" id="adminFilterDate" class="form-control form-control-sm" style="width: 150px;">
+                        <select id="adminFilterSlot" class="form-select form-select-sm" style="width: 130px;">
+                            <option value="">Tất cả ca</option>
+                            <option value="07:00">Ca 1 (07:00)</option>
+                            <option value="09:30">Ca 2 (09:30)</option>
+                            <option value="13:00">Ca 3 (13:00)</option>
+                            <option value="15:30">Ca 4 (15:30)</option>
+                            <option value="18:00">Ca 5 (18:00)</option>
+                        </select>
+                        <select id="adminFilterLab" class="form-select form-select-sm" style="width: 150px;">
+                            <option value="">Tất cả phòng</option>
+                            <!-- Ajax Load -->
+                        </select>
+                        <button class="btn btn-sm btn-dark" onclick="loadAdminHistory()"><i class="fas fa-search"></i></button>
+                        <button class="btn btn-sm btn-success" onclick="exportHistory()"><i class="fas fa-file-excel"></i> Xuất Excel</button>
+                    </div>
+                </div>
+                <div class="card-table">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Người sử dụng</th>
+                                    <th>Phòng Lab</th>
+                                    <th>Mục đích</th>
+                                    <th>Thời gian</th>
+                                    <th>Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminHistoryTableBody">
+                                <!-- Ajax Load -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab Labs -->
+            <div class="tab-pane fade" id="tab-labs">
+                <div class="card p-5 text-center">
+                    <i class="fas fa-hard-hat fa-4x text-muted mb-4"></i>
+                    <h3 class="fw-bold">Đang cập nhật tính năng</h3>
+                    <p class="text-muted">Quản lý trực tiếp danh sách phòng Lab trên Google Sheet.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Update Time
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('current-time').innerText = now.toLocaleString('vi-VN');
+        }, 1000);
+
+        // Sidebar logic for Mobile
+        document.getElementById('toggle-sidebar').onclick = () => {
+            document.getElementById('sidebar').classList.toggle('active');
+        };
+
+        // Sync Tab Buttons in Sidebar with Tab Panes
+        $('.sidebar-menu .nav-link').on('click', function(e) {
+            const target = $(this).attr('data-bs-target');
+            if (target && target !== '#') {
+                e.preventDefault();
+                $('.sidebar-menu .nav-link').removeClass('active');
+                $(this).addClass('active');
+                
+                $('.tab-pane').removeClass('show active');
+                $(target).addClass('show active');
+                
+                if (window.innerWidth < 992) {
+                    document.getElementById('sidebar').classList.remove('active');
+                }
+            }
+        });
+
+        // Helper to format time safely
+        function formatDateTime(dateTimeStr) {
+            if (!dateTimeStr) return { date: 'N/A', time: 'N/A' };
+            const parts = dateTimeStr.includes('T') ? dateTimeStr.split('T') : dateTimeStr.split(' ');
+            return {
+                date: parts[0] || 'N/A',
+                time: parts[1] ? parts[1].slice(0, 5) : 'N/A'
+            };
+        }
+
+        // Charts Global Variables
+        let trendChart = null;
+        let labChart = null;
+
+        function renderCharts(bookings) {
+            const last7Days = [];
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                last7Days.push(d.toISOString().split('T')[0]);
+            }
+
+            // 1. Booking Trend Data
+            const trendData = last7Days.map(date => {
+                return bookings.filter(b => (b.start_time || "").startsWith(date)).length;
+            });
+
+            // 2. Lab Usage Data
+            const labCounts = {};
+            bookings.forEach(b => {
+                const name = b.lab_name || "N/A";
+                labCounts[name] = (labCounts[name] || 0) + 1;
+            });
+
+            // Destroy existing charts if any
+            if (trendChart) trendChart.destroy();
+            if (labChart) labChart.destroy();
+
+            // Render Trend Chart
+            const trendCtx = document.getElementById('bookingTrendChart').getContext('2d');
+            trendChart = new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: last7Days.map(d => d.split('-').reverse().slice(0,2).join('/')),
+                    datasets: [{
+                        label: 'Lượt đặt',
+                        data: trendData,
+                        borderColor: '#e31b23',
+                        backgroundColor: 'rgba(227, 27, 35, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 6,
+                        pointBackgroundColor: '#e31b23',
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2.5, // Tỷ lệ rộng:cao là 2.5:1
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: { padding: 12, cornerRadius: 8 }
+                    },
+                    scales: { 
+                        y: { 
+                            beginAtZero: true, 
+                            ticks: { stepSize: 1, color: '#9ca3af' },
+                            grid: { borderDash: [5, 5], color: '#e5e7eb' }
+                        },
+                        x: {
+                            ticks: { color: '#9ca3af' },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // Render Lab Chart
+            const labCtx = document.getElementById('labUsageChart').getContext('2d');
+            labChart = new Chart(labCtx, {
+                type: 'doughnut', // Chuyển sang Doughnut cho hiện đại và dễ nhìn hơn
+                data: {
+                    labels: Object.keys(labCounts),
+                    datasets: [{
+                        data: Object.values(labCounts),
+                        backgroundColor: [
+                            '#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#6366f1'
+                        ],
+                        borderWidth: 0,
+                        hoverOffset: 15
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 1.2, // Tỷ lệ gần vuông cho biểu đồ tròn
+                    plugins: { 
+                        legend: { 
+                            position: 'bottom', 
+                            labels: { 
+                                padding: 20,
+                                usePointStyle: true,
+                                font: { size: 12, weight: '600' }
+                            } 
+                        } 
+                    },
+                    cutout: '70%' // Làm biểu đồ vòng khuyên mỏng hơn
+                }
+            });
+        }
+
+        // Main Loaders
+        async function loadBookings() {
+            const tbody = document.getElementById('bookingTableBody');
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><div class="spinner-border text-danger spinner-border-sm me-2"></div> Đang tải danh sách...</td></tr>';
+            
+            try {
+                const res = await fetch('/api/bookings/list/');
+                
+                if (res.status === 302 || res.url.includes('login')) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Phiên làm việc hết hạn. <a href="/django-admin/login/">Đăng nhập lại</a></td></tr>';
+                    return;
+                }
+
+                if (!res.ok) throw new Error("Server error: " + res.status);
+                
+                const bookings = await res.json();
+                
+                // Cập nhật biểu đồ
+                if (Array.isArray(bookings)) {
+                    renderCharts(bookings);
+                }
+
+                tbody.innerHTML = '';
+
+                if (!Array.isArray(bookings) || bookings.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">Chưa có đơn đăng ký nào được ghi nhận.</td></tr>';
+                    document.getElementById('stat-total').innerText = 0;
+                    document.getElementById('stat-pending').innerText = 0;
+                    return;
+                }
+
+                // Stats Update
+                document.getElementById('stat-total').innerText = bookings.length;
+                document.getElementById('stat-pending').innerText = bookings.filter(b => (b.status || b.Status) === 'PENDING').length;
+
+                bookings.reverse().forEach(b => {
+                    try {
+                        // Chuẩn hóa tên thuộc tính (Hỗ trợ cả chữ hoa/thường từ Sheet)
+                        const id = b.id || b.ID || 'N/A';
+                        const user = b.user || b.User || 'N/A';
+                        const mssv = b.mssv || b.MSSV || 'N/A';
+                        const status = (b.status || b.Status || 'PENDING').toUpperCase();
+                        const startTime = b.start_time || b.StartTime || '';
+                        const endTime = b.end_time || b.EndTime || '';
+                        const labName = b.lab_name || b.LabName || 'N/A';
+                        const groupSize = b.group_size || b.GroupSize || 1;
+                        const type = b.type || b.Type || 'Cá nhân';
+
+                        const isPending = status === 'PENDING';
+                        const statusBadge = status === 'APPROVED' ? 'bg-success text-white' : (status === 'REJECTED' ? 'bg-danger text-white' : 'bg-warning text-dark');
+                        
+                        const startInfo = formatDateTime(startTime);
+                        const endInfo = formatDateTime(endTime);
+
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(user)}&background=random" class="rounded-circle me-3" width="40">
+                                        <div>
+                                            <div class="fw-bold text-dark">${user}</div>
+                                            <div class="small text-muted">${mssv}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-light text-dark border px-3">${labName}</span></td>
+                                <td>
+                                    <div class="fw-bold">${startInfo.date}</div>
+                                    <div class="small text-muted">${startInfo.time} - ${endInfo.time}</div>
+                                </td>
+                                <td>
+                                    <div class="small fw-bold">${type}</div>
+                                    <div class="small text-muted">${groupSize} người</div>
+                                </td>
+                                <td><span class="badge badge-status ${statusBadge}">${status}</span></td>
+                                <td class="text-end">
+                                    ${isPending ? `
+                                        <div class="btn-group shadow-sm rounded-3 overflow-hidden">
+                                            <button class="btn btn-sm btn-success px-3" title="Duyệt" onclick="updateBookingStatus('${id}', 'APPROVED')"><i class="fas fa-check"></i></button>
+                                            <button class="btn btn-sm btn-danger px-3" title="Từ chối" onclick="updateBookingStatus('${id}', 'REJECTED')"><i class="fas fa-times"></i></button>
+                                        </div>
+                                    ` : `
+                                        <div class="d-flex align-items-center justify-content-end gap-2">
+                                            ${status === 'APPROVED' ? `<button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="resendEmail('${id}', event)"><i class="fas fa-paper-plane me-1"></i> Gửi mail</button>` : ''}
+                                            <span class="text-muted small italic">Đã xử lý</span>
+                                        </div>
+                                    `}
+                                </td>
+                            </tr>
+                        `;
+                    } catch (e) {
+                        console.warn("Bỏ qua 1 dòng dữ liệu lỗi:", b, e);
+                    }
+                });
+            } catch (err) {
+                console.error("Lỗi load danh sách:", err);
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger">Lỗi kết nối dữ liệu: ${err.message}</td></tr>`;
+            }
+        }
+
+        async function loadStudents() {
+            const res = await fetch('/api/students/');
+            const students = await res.json();
+            const tbody = document.getElementById('studentTableBody');
+            tbody.innerHTML = '';
+
+            students.forEach(s => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td><code class="fw-bold">${s.mssv}</code></td>
+                        <td class="fw-bold text-dark">${s.name}</td>
+                        <td>
+                            <div class="small">${s.email}</div>
+                            <div class="small text-muted">${s.phone}</div>
+                        </td>
+                        <td><span class="badge badge-status ${s.status === 'APPROVED' ? 'bg-success text-white' : 'bg-warning text-dark'}">${s.status || 'PENDING'}</span></td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-dark" onclick="updateStudentStatus('${s.mssv}', 'APPROVED')">Kích hoạt</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function loadHygiene() {
+            const res = await fetch('/api/hygiene/list/');
+            const reports = await res.json();
+            document.getElementById('stat-hygiene').innerText = reports.filter(r => r.status !== 'SẠCH').length;
+            
+            const container = document.getElementById('hygieneContainer');
+            container.innerHTML = '';
+
+            reports.reverse().forEach(r => {
+                const statusColor = r.status === 'SẠCH' ? 'success' : (r.status === 'BẨN' ? 'warning' : 'danger');
+                container.innerHTML += `
+                    <div class="col-md-6 col-xl-4">
+                        <div class="stat-card border-top border-${statusColor} border-5 h-100">
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="badge bg-${statusColor} bg-opacity-10 text-${statusColor} fw-bold">${r.status}</span>
+                                <small class="text-muted">${r.timestamp.split(' ')[0]}</small>
+                            </div>
+                            <h5 class="fw-bold">${r.lab_name}</h5>
+                            <p class="small text-muted mb-3">${r.notes || 'Không có ghi chú'}</p>
+                            <div class="d-flex justify-content-between align-items-center mt-auto pt-3 border-top">
+                                <div class="small fw-bold text-secondary">Bởi: ${r.reporter}</div>
+                                ${r.image_url ? `<a href="${r.image_url}" target="_blank" class="btn btn-sm btn-link text-primary p-0">Xem ảnh <i class="fas fa-external-link-alt ms-1"></i></a>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // Action Handlers
+        async function updateBookingStatus(id, status) {
+            let reason = '';
+            if (status === 'REJECTED') {
+                reason = prompt("Vui lòng nhập lý do từ chối đơn này:");
+                if (reason === null) return; // Nhấn Cancel
+                if (!reason.trim()) {
+                    alert("Bạn phải nhập lý do từ chối!");
+                    return;
+                }
+            } else {
+                if (!confirm(`Xác nhận Duyệt đơn này?`)) return;
+            }
+
+            const res = await fetch('/api/bookings/update-status/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, status, reason })
+            });
+            if ((await res.json()).status === 'success') {
+                loadBookings();
+            }
+        }
+
+        async function resendEmail(id, event) {
+            if (!confirm("Bạn có chắc chắn muốn gửi lại mail cho sinh viên này?")) return;
+            
+            const btn = event.target.closest('button');
+            const originalContent = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang gửi...';
+
+            try {
+                const res = await fetch('/api/bookings/resend-email/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id })
+                });
+                const result = await res.json();
+                if (result.status === 'success') {
+                    alert("Đã gửi lại mail thành công!");
+                } else {
+                    alert("Lỗi: " + result.message);
+                }
+            } catch (err) {
+                alert("Lỗi kết nối server.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalContent;
+            }
+        }
+
+        async function loadLabs() {
+             try {
+                 const res = await fetch('/api/labs/');
+                 const labs = await res.json();
+                 
+                 // Kiểm tra nếu labs không phải là mảng (có thể là object chứa lỗi)
+                 if (!Array.isArray(labs)) {
+                     console.error("Dữ liệu Lab không hợp lệ:", labs);
+                     document.getElementById('stat-labs').innerText = 0;
+                     return;
+                 }
+
+                 document.getElementById('stat-labs').innerText = labs.length;
+                 const filterLab = document.getElementById('adminFilterLab');
+                 if (filterLab) {
+                     filterLab.innerHTML = '<option value="">Tất cả phòng</option>';
+                     labs.forEach(l => {
+                         const lId = l.id || l.ID;
+                         const lName = l.name || l.Name;
+                         filterLab.innerHTML += `<option value="${lId}">${lName}</option>`;
+                     });
+                 }
+             } catch (err) {
+                 console.error("Lỗi khi tải danh sách Lab:", err);
+             }
+        }
+
+        async function loadConfig() {
+            const res = await fetch('/api/config/auto-approval/');
+            const data = await res.json();
+            document.getElementById('autoApprovalToggle').checked = data.auto_approval;
+        }
+
+        async function toggleAutoApproval(status) {
+            const res = await fetch('/api/config/update-auto-approval/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+            const result = await res.json();
+            if (result.status === 'success') {
+                const toast = status ? "Đã BẬT phê duyệt tự động" : "Đã TẮT phê duyệt tự động";
+                console.log(toast);
+            }
+        }
+
+        async function loadAdminHistory() {
+            const tbody = document.getElementById('adminHistoryTableBody');
+            const filterName = document.getElementById('adminFilterName').value.toLowerCase();
+            const filterDate = document.getElementById('adminFilterDate').value;
+            const filterSlot = document.getElementById('adminFilterSlot').value; // Giờ bắt đầu (07:00, 09:30...)
+            const filterLab = document.getElementById('adminFilterLab').value;
+            
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Đang tải...</td></tr>';
+            
+            try {
+                const res = await fetch('/api/bookings/list/');
+                const data = await res.json();
+                
+                if (data && Array.isArray(data)) {
+                    const filtered = data.filter(b => {
+                        const nameMatch = !filterName || 
+                            (b.user || "").toLowerCase().includes(filterName) || 
+                            (b.mssv || "").toLowerCase().includes(filterName);
+                        
+                        const dateMatch = !filterDate || (b.start_time || "").startsWith(filterDate);
+                        
+                        // Lọc theo khung giờ (Ca)
+                        const startTimeStr = (b.start_time || "");
+                        const recordTime = startTimeStr.includes('T') ? startTimeStr.split('T')[1].substring(0, 5) : (startTimeStr.includes(' ') ? startTimeStr.split(' ')[1].substring(0, 5) : "");
+                        const slotMatch = !filterSlot || recordTime === filterSlot;
+
+                        // Lọc theo phòng Lab
+                        const labMatch = !filterLab || String(b.lab_name || b.LabName) === String(filterLab) || String(b.lab_id || b.LabID) === String(filterLab);
+
+                        return nameMatch && dateMatch && slotMatch && labMatch;
+                    });
+
+                    filtered.sort((a, b) => new Date(b.start_time) - new Date(a.start_time));
+                    tbody.innerHTML = '';
+
+                    if (filtered.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">Không tìm thấy lịch sử phù hợp.</td></tr>';
+                        return;
+                    }
+
+                    filtered.forEach(b => {
+                        const s = formatDateTime(b.start_time);
+                        const e = formatDateTime(b.end_time);
+                        const badgeClass = b.status === 'APPROVED' ? 'bg-success' : (b.status === 'REJECTED' ? 'bg-danger' : 'bg-warning text-dark');
+                        
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>
+                                    <div class="fw-bold">${b.user}</div>
+                                    <div class="small text-muted">${b.mssv}</div>
+                                </td>
+                                <td><span class="badge bg-light text-dark border">${b.lab_name}</span></td>
+                                <td><div class="small" title="${b.purpose}">${b.purpose || '---'}</div></td>
+                                <td>
+                                    <div class="small fw-bold">${s.date}</div>
+                                    <div class="small text-muted">${s.time} - ${e.time}</div>
+                                </td>
+                                <td><span class="badge badge-status ${badgeClass}">${b.status}</span></td>
+                            </tr>
+                        `;
+                    });
+                }
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger">Lỗi tải dữ liệu.</td></tr>';
+            }
+        }
+
+        function exportHistory() {
+            const name = document.getElementById('adminFilterName').value;
+            const date = document.getElementById('adminFilterDate').value;
+            const slot = document.getElementById('adminFilterSlot').value;
+            const lab = document.getElementById('adminFilterLab').value;
+            
+            const url = `/api/export/bookings/?name=${encodeURIComponent(name)}&date=${date}&slot=${slot}&lab=${encodeURIComponent(lab)}`;
+            window.open(url, '_blank');
+        }
+
+        // Event listeners for filters
+        document.getElementById('adminFilterName').oninput = loadAdminHistory;
+        document.getElementById('adminFilterDate').onchange = loadAdminHistory;
+        document.getElementById('adminFilterSlot').onchange = loadAdminHistory;
+        document.getElementById('adminFilterLab').onchange = loadAdminHistory;
+
+        // Init
+        $(document).ready(function() {
+            loadBookings();
+            loadStudents();
+            loadHygiene();
+            loadLabs();
+            loadConfig();
+            loadAdminHistory();
+        });
+    </script>
+</body>
+</html>

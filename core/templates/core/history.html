@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lịch Sử Sử Dụng - Lab Management VLU</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --vlu-red: #e31b23;
+            --sidebar-bg: #1e293b;
+            --bg-light: #f8fafc;
+            --sidebar-width: 260px;
+        }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-light); color: #1e293b; }
+        #sidebar { width: var(--sidebar-width); height: 100vh; background: var(--sidebar-bg); color: #fff; position: fixed; z-index: 1050; display: flex; flex-direction: column; transition: all 0.3s; }
+        .sidebar-header { padding: 2rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .sidebar-nav { padding: 1.5rem 0.75rem; flex-grow: 1; }
+        .nav-link { display: flex; align-items: center; padding: 0.875rem 1rem; color: #94a3b8; border-radius: 0.5rem; margin-bottom: 0.25rem; transition: all 0.2s; text-decoration: none; font-weight: 500; }
+        .nav-link i { width: 1.5rem; margin-right: 0.75rem; }
+        .nav-link:hover, .nav-link.active { background: #334155; color: #fff; }
+        .nav-link.active { background: var(--vlu-red); }
+        #content { margin-left: var(--sidebar-width); padding: 2rem; min-height: 100vh; transition: all 0.3s; }
+        .section-card { background: #fff; border-radius: 1rem; padding: 2rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: none; }
+        .status-badge { padding: 0.5rem 1rem; border-radius: 2rem; font-weight: 600; font-size: 0.8rem; }
+        @media (max-width: 991.98px) { #sidebar { margin-left: -260px; } #sidebar.active { margin-left: 0; } #content { margin-left: 0; } }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <nav id="sidebar">
+        <div class="sidebar-header text-center">
+            <img src="https://vuainnhanh.com/wp-content/uploads/2023/02/logo-van-lang-896x1024-1-1200x1371.png" alt="VLU Logo" style="max-height: 70px;">
+            <h5 class="fw-bold mt-3">LAB MANAGEMENT</h5>
+        </div>
+        <div class="sidebar-nav">
+            <a href="/" class="nav-link"><i class="fas fa-house"></i> Trang Chủ</a>
+            <a href="/booking/" class="nav-link"><i class="fas fa-calendar-check"></i> Đăng Ký Sử Dụng</a>
+            <a href="/history/" class="nav-link active"><i class="fas fa-history"></i> Lịch Sử Sử Dụng</a>
+            <hr class="text-white-50">
+            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#hygieneModal"><i class="fas fa-broom"></i> Báo Cáo Vệ Sinh</a>
+        </div>
+    </nav>
+
+    <div id="content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bold"><i class="fas fa-history text-danger me-2"></i> LỊCH SỬ SỬ DỤNG PHÒNG LAB</h3>
+            <div class="d-flex gap-2">
+                <input type="text" id="filterName" class="form-control" style="width: 250px;" placeholder="Tên hoặc MSSV...">
+                <input type="date" id="filterDate" class="form-control">
+                <button class="btn btn-danger" onclick="loadHistory()"><i class="fas fa-sync-alt"></i></button>
+            </div>
+        </div>
+
+        <div class="section-card">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>MSSV & Họ Tên</th>
+                            <th>Phòng Lab</th>
+                            <th>Mục đích</th>
+                            <th>Thời gian sử dụng</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-danger"></div><br>Đang tải dữ liệu...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        async function loadHistory() {
+            const historyBody = document.getElementById('historyBody');
+            const filterName = document.getElementById('filterName').value.toLowerCase();
+            const filterDate = document.getElementById('filterDate').value;
+            
+            try {
+                const res = await fetch('/api/bookings/list/');
+                const data = await res.json();
+                
+                if (data && Array.isArray(data)) {
+                    let filtered = data.filter(b => {
+                        const nameMatch = !filterName || 
+                            (b.user || "").toLowerCase().includes(filterName) || 
+                            (b.mssv || "").toLowerCase().includes(filterName);
+                        const dateMatch = !filterDate || (b.start_time || "").startsWith(filterDate);
+                        return nameMatch && dateMatch;
+                    });
+
+                    filtered.sort((a, b) => new Date(b.start_time) - new Date(a.start_time));
+
+                    if (filtered.length === 0) {
+                        historyBody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-muted">Không tìm thấy dữ liệu phù hợp.</td></tr>';
+                        return;
+                    }
+
+                    historyBody.innerHTML = filtered.map(b => `
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-dark">${b.user}</div>
+                                <div class="small text-muted text-uppercase">${b.mssv}</div>
+                            </td>
+                            <td><span class="badge bg-light text-dark border px-3 py-2">${b.lab_name}</span></td>
+                            <td><div class="small" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${b.purpose}">${b.purpose || '---'}</div></td>
+                            <td>
+                                <div class="fw-medium">${b.start_time.split('T')[0]}</div>
+                                <div class="small text-muted">${b.start_time.split('T')[1].substring(0,5)} - ${b.end_time.split('T')[1].substring(0,5)}</div>
+                            </td>
+                            <td>
+                                <span class="status-badge ${b.status === 'APPROVED' ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning'} border">
+                                    <i class="fas ${b.status === 'APPROVED' ? 'fa-check-circle' : 'fa-clock'} me-1"></i>
+                                    ${b.status === 'APPROVED' ? 'Đã duyệt' : 'Chờ duyệt'}
+                                </span>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (err) {
+                historyBody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-danger">Lỗi kết nối máy chủ!</td></tr>';
+            }
+        }
+
+        document.getElementById('filterName').oninput = loadHistory;
+        document.getElementById('filterDate').onchange = loadHistory;
+        window.onload = loadHistory;
+    </script>
+</body>
+</html>
