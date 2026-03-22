@@ -227,7 +227,7 @@ class LabBookingService:
                 data.get('group_size', 1), data.get('group_members', '')
             ]
             self.booking_sheet.append_row(row)
-            return True, "Đăng ký thành công!"
+            return True, booking_id
         except Exception as e:
             return False, f"Lỗi ghi dữ liệu: {str(e)}"
 

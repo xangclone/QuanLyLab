@@ -71,27 +71,33 @@ def api_create_booking(request):
         try:
             data = json.loads(request.body)
             service = LabBookingService()
-            success, msg = service.validate_and_create(data)
+            success, result_val = service.validate_and_create(data)
             
             if success:
-                # Gửi mail thông báo cho Admin kèm bảng thông tin
+                bid = result_val # Lúc này result_val chính là booking_id
+                url = request.build_absolute_uri(reverse('confirm-booking') + f'?bid={bid}')
+                
                 info = {
                     "Người đăng ký": f"{data.get('user')} ({data.get('mssv')})",
-                    "Email": data.get('email'),
                     "Phòng Lab": data.get('lab_name'),
                     "Thời gian": data.get('start_time').replace('T', ' '),
                     "Mục đích": data.get('purpose'),
                     "Hình thức": f"{data.get('type')} ({data.get('group_size')} người)"
                 }
-                content = f"<p>Hệ thống nhận được yêu cầu đăng ký mới:</p>{get_info_table(info)}"
-                content += f'<p style="text-align:center;"><a href="{request.build_absolute_uri("/admin/")}" style="background-color:#333; color:#fff; padding:10px 20px; text-decoration:none; border-radius:4px;">ĐI ĐẾN TRANG QUẢN TRỊ</a></p>'
                 
-                html = get_email_template("THÔNG BÁO ĐĂNG KÝ MỚI", content)
+                content = f"<p>Chào {data.get('user')}, chúng tôi đã nhận được đơn đăng ký mượn phòng Lab của bạn.</p>"
+                content += f"<p>Để hoàn tất việc giữ chỗ và đồng bộ lịch sử dụng vào Google Calendar, vui lòng nhấn vào nút bên dưới:</p>"
+                content += get_info_table(info)
+                content += f'<p style="text-align:center; margin-top:25px;"><a href="{url}" style="background-color:#d32f2f; color:#fff; padding:12px 25px; text-decoration:none; border-radius:4px; font-weight:bold;">XÁC NHẬN & ĐỒNG BỘ LỊCH</a></p>'
+                
+                html = get_email_template("XÁC NHẬN ĐĂNG KÝ MƯỢN LAB", content, "* Lưu ý: Đơn của bạn chỉ chính thức được ghi nhận sau khi bạn nhấn nút Xác nhận ở trên.")
+                
                 try:
-                    send_mail(f"THÔNG BÁO ĐĂNG KÝ MỚI", "", settings.EMAIL_HOST_USER, [settings.EMAIL_HOST_USER], html_message=html)
+                    send_mail(f"[VLU LAB] Xác nhận đăng ký: {data.get('lab_name')}", "", settings.EMAIL_HOST_USER, [data.get('email')], html_message=html)
                 except: pass
-                return JsonResponse({'status': 'success', 'message': 'Đã gửi đơn, vui lòng chờ phê duyệt.'})
-            return JsonResponse({'status': 'error', 'message': msg})
+                
+                return JsonResponse({'status': 'success', 'message': 'Đã gửi mail xác nhận, vui lòng kiểm tra hộp thư của bạn.'})
+            return JsonResponse({'status': 'error', 'message': result_val})
         except Exception as e: return JsonResponse({'status': 'error', 'message': str(e)})
 
 @csrf_exempt
